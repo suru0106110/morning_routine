@@ -61,12 +61,6 @@ async function fetchPriceV8(symbol: string): Promise<PriceResult | null> {
   }
 }
 
-// デバッグ用（確認後削除）
-export async function GET() {
-  const result = await fetchPrice("1475.T");
-  return NextResponse.json({ test: result });
-}
-
 // 数字のみのシンボルは日本株として .T を補完
 function normalizeSymbol(symbol: string): string {
   return /^\d+$/.test(symbol) ? `${symbol}.T` : symbol;
