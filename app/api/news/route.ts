@@ -51,7 +51,7 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/rss+xml,application/xml,text/xml,*/*" },
-      next: { revalidate: 600 },
+      cache: "no-store",
     });
     if (!res.ok) return [];
     return parseXml(await res.text());
