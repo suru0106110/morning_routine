@@ -80,27 +80,26 @@ async function fetchNHKSummary(url: string): Promise<string> {
     if (!res.ok) return "";
     const html = await res.text();
 
-    // NHK記事本文を抽出（複数のセレクタに対応）
-    const bodyPatterns = [
-      /<section[^>]*class="[^"]*body[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
-      /<div[^>]*class="[^"]*body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
-      /<div[^>]*id="news_textbody"[^>]*>([\s\S]*?)<\/div>/i,
-    ];
+    // すべての<p>タグを取得して完結した文を探す
+    const pTags = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
+    const candidates: string[] = [];
 
-    for (const pattern of bodyPatterns) {
-      const m = html.match(pattern);
-      if (m) {
-        const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-        if (text.length > 20) {
-          return cleanSummary(text);
-        }
+    for (const m of pTags) {
+      const text = m[1]
+        .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&nbsp;/g, " ").replace(/\s+/g, " ")
+        .trim();
+      // 20文字以上の日本語テキストのみ
+      if (text.length > 20 && /[あ-ん]/.test(text)) {
+        candidates.push(text);
       }
     }
 
-    // フォールバック: <p>タグの最初の内容
-    const pMatch = html.match(/<p[^>]*>([\s\S]{20,200}?)<\/p>/i);
-    if (pMatch) {
-      return cleanSummary(pMatch[1].replace(/<[^>]+>/g, "").trim());
+    // 候補から完結した文を探す
+    for (const candidate of candidates) {
+      const summary = cleanSummary(candidate);
+      if (summary) return summary;
     }
     return "";
   } catch {
