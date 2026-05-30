@@ -46,9 +46,9 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
   }
 }
 
-async function summarizeWithGemini(items: NewsItem[]): Promise<NewsItem[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return items; // APIキー未設定時はタイトルのみ
+async function summarizeWithAI(items: NewsItem[]): Promise<NewsItem[]> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return items;
 
   const titles = items.map((n, i) => `${i + 1}. ${n.title}`).join("\n");
   const prompt = `あなたは朝のニュースアナウンサーです。以下のニュース見出しを、ラジオの速報まとめ風に、それぞれ2〜3文で自然に読み上げられる要約文にしてください。
@@ -64,23 +64,25 @@ async function summarizeWithGemini(items: NewsItem[]): Promise<NewsItem[]> {
 ${titles}`;
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
-        }),
-      }
-    );
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://morning-routine-liard.vercel.app",
+      },
+      body: JSON.stringify({
+        model: "meta-llama/llama-4-scout:free",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.4,
+        max_tokens: 1024,
+      }),
+    });
     if (!res.ok) return items;
 
     const json = await res.json();
-    const text: string = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    const text: string = json?.choices?.[0]?.message?.content ?? "";
 
-    // 各番号の行を抽出して対応するitemに割り当て
     const lines = text.split(/\n+/);
     const summaries: string[] = [];
     let current = "";
@@ -97,7 +99,7 @@ ${titles}`;
 
     return items.map((item, i) => ({
       ...item,
-      summary: summaries[i] ?? item.title,
+      summary: summaries[i] ?? "",
     }));
   } catch {
     return items;
@@ -118,6 +120,6 @@ export async function GET() {
     return true;
   }).slice(0, 7);
 
-  const withSummary = await summarizeWithGemini(unique);
+  const withSummary = await summarizeWithAI(unique);
   return NextResponse.json({ items: withSummary });
 }
