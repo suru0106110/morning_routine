@@ -45,7 +45,8 @@ export default function MorningPlayer({ assetText }: Props) {
       items.forEach((n, i) => {
         const prefix = i === 0 ? "最初のニュースです。" : "続いてのニュースです。";
         const suffix = i === items.length - 1 ? "以上が本日のニュースでした。" : "";
-        q.push(`${prefix}${n.title}。${suffix}`);
+        const body = n.summary ? n.summary : `${n.title}。`;
+        q.push(`${prefix}${body}${suffix}`);
       });
       q.push("以上です。");
       return q;
