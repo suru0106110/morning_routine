@@ -72,7 +72,7 @@ ${titles}`;
         "HTTP-Referer": "https://morning-routine-liard.vercel.app",
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-4-scout:free",
+        model: "meta-llama/llama-3.3-70b-instruct:free",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.4,
         max_tokens: 1024,
