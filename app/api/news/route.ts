@@ -48,13 +48,18 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
 }
 
 function cleanSummary(text: string): string {
-  // 句点で文を分割して最初の2文だけ取る
-  const sentences = text
-    .replace(/…+/g, "")           // … を除去
+  const cleaned = text
+    .replace(/…+/g, "")      // … (Unicode ellipsis)
+    .replace(/\.{2,}/g, "")       // ... (ASCII dots)
     .replace(/　/g, " ")           // 全角スペース
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const sentences = cleaned
     .split(/。/)
     .map(s => s.trim())
     .filter(s => s.length > 5);
+
   return sentences.slice(0, 2).join("。") + "。";
 }
 
