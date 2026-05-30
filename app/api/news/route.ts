@@ -29,7 +29,10 @@ function parseXml(xml: string): NewsItem[] {
   for (const block of blocks.slice(0, 6)) {
     const title = extractTag(block, "title");
     const link = extractTag(block, "link") || extractTag(block, "guid");
-    if (title.length > 3) items.push({ title, summary: "", url: link });
+    const desc = extractTag(block, "description");
+    // descriptionから完結した文を抽出
+    const summary = cleanSummary(desc);
+    if (title.length > 3) items.push({ title, summary, url: link });
   }
   return items;
 }
@@ -69,44 +72,6 @@ function cleanSummary(text: string): string {
   return complete.slice(0, 2).join("。") + "。";
 }
 
-// NHK記事ページから本文の最初の1〜2文を取得
-async function fetchNHKSummary(url: string): Promise<string> {
-  try {
-    if (!url.includes("nhk.or.jp")) return "";
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      cache: "no-store",
-    });
-    if (!res.ok) return "";
-    const html = await res.text();
-
-    // すべての<p>タグを取得して完結した文を探す
-    const pTags = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)];
-    const candidates: string[] = [];
-
-    for (const m of pTags) {
-      const text = m[1]
-        .replace(/<[^>]+>/g, "")
-        .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-        .replace(/&nbsp;/g, " ").replace(/\s+/g, " ")
-        .trim();
-      // 20文字以上の日本語テキストのみ
-      if (text.length > 20 && /[あ-ん]/.test(text)) {
-        candidates.push(text);
-      }
-    }
-
-    // 候補から完結した文を探す
-    for (const candidate of candidates) {
-      const summary = cleanSummary(candidate);
-      if (summary) return summary;
-    }
-    return "";
-  } catch {
-    return "";
-  }
-}
-
 export async function GET() {
   const results = await Promise.allSettled(RSS_FEEDS.map(fetchFeed));
   const all: NewsItem[] = [];
@@ -123,13 +88,5 @@ export async function GET() {
     return true;
   }).slice(0, 7);
 
-  // NHK記事から本文を取得（並列で最大3件）
-  const withSummary = await Promise.all(
-    unique.map(async (item) => {
-      const summary = await fetchNHKSummary(item.url);
-      return { ...item, summary };
-    })
-  );
-
-  return NextResponse.json({ items: withSummary });
+  return NextResponse.json({ items: unique });
 }
