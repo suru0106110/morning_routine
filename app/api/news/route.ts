@@ -58,13 +58,13 @@ function cleanSummary(text: string): string {
   const sentences = cleaned
     .split(/。/)
     .map(s => s.trim())
-    .filter(s => s.length > 10);  // 短すぎる断片を除外
+    .filter(s => s.length > 10);
 
-  // 途中で切れた文（ました/します/でした以外で終わる）を除外
-  const complete = sentences.filter(s =>
-    /[。]?$/.test(s) && !/[ぁ-ん]{1,3}$/.test(s) || s.length > 30
-  );
+  // 文末が自然な日本語で終わっているか（完結した文のみ使う）
+  const isComplete = (s: string) =>
+    /(?:した|します|ました|ません|でした|ます|です|される|された|している|していた|おり|あり|なり|という|ています|ていた|見込み|予定|方針)$/.test(s);
 
+  const complete = sentences.filter(isComplete);
   const result = (complete.length > 0 ? complete : sentences).slice(0, 2);
   return result.join("。") + "。";
 }
