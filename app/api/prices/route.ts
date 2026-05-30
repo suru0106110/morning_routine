@@ -67,13 +67,21 @@ export async function GET() {
   return NextResponse.json({ test: result });
 }
 
+// 数字のみのシンボルは日本株として .T を補完
+function normalizeSymbol(symbol: string): string {
+  return /^\d+$/.test(symbol) ? `${symbol}.T` : symbol;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { symbols }: { symbols: string[] } = await req.json();
     if (!symbols?.length) return NextResponse.json({ prices: [] });
-    const results = await Promise.all(symbols.map(fetchPrice));
+    const normalized = symbols.map(normalizeSymbol);
+    const results = await Promise.all(normalized.map(fetchPrice));
     const prices = results.filter(Boolean) as PriceResult[];
-    return NextResponse.json({ prices });
+    // 元のシンボルに戻して返す（クライアント側のマップと一致させる）
+    const mapped = prices.map((p, i) => ({ ...p, symbol: symbols[i] }));
+    return NextResponse.json({ prices: mapped });
   } catch {
     return NextResponse.json({ prices: [] }, { status: 500 });
   }
