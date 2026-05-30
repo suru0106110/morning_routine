@@ -3,36 +3,23 @@ import { NextResponse } from "next/server";
 type NewsItem = { title: string; summary: string; url: string };
 
 const RSS_FEEDS = [
-  // Google News トピック（経済・ビジネス）- 検索より精度が高い
   "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
-  // Reuters Japan
   "https://feeds.reuters.com/reuters/JPBusinessNews",
-  // NHK 経済
   "https://www3.nhk.or.jp/rss/news/cat5.xml",
 ];
 
-// ニュースとして不適切なタイトルを除外するパターン
 const NOISE_PATTERNS = [
-  /基準価格/,
-  /投資信託情報/,
-  /株価情報/,
-  /【\d{7}[A-Z]?】/,  // 投信コード
-  /^\s*[\d,]+\s*円\s*$/,  // 数字だけのタイトル
-  /yahoo.*ファイナンス/i,
-  /みんかぶ/,
-  /株探/,
+  /基準価格/, /投資信託情報/, /株価情報/,
+  /【\d{7}[A-Z]?】/, /yahoo.*ファイナンス/i, /みんかぶ/, /株探/,
 ];
 
 const UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
 
 function extractTag(block: string, tag: string): string {
-  const re = new RegExp(
-    `<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, "i"
-  );
+  const re = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, "i");
   return (block.match(re)?.[1] ?? "")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&nbsp;/g, " ")
+    .replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ")
     .replace(/\s+/g, " ").trim();
 }
 
@@ -60,61 +47,44 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
   }
 }
 
-async function summarizeWithAI(items: NewsItem[]): Promise<NewsItem[]> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return items;
-
-  const titles = items.map((n, i) => `${i + 1}. ${n.title}`).join("\n");
-  const prompt = `あなたは朝のニュースアナウンサーです。以下のニュース見出しを、ラジオの速報まとめ風に、それぞれ2〜3文で自然に読み上げられる要約文にしてください。
-
-ルール：
-- 各ニュースを「番号. 要約文」の形式で出力
-- 1文目：何が起きたかを端的に
-- 2〜3文目：背景や影響を簡潔に
-- URLや記号は含めない
-- 読み上げやすい自然な日本語で
-
-見出し：
-${titles}`;
-
+// NHK記事ページから本文の最初の1〜2文を取得
+async function fetchNHKSummary(url: string): Promise<string> {
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
-        }),
-      }
-    );
-    if (!res.ok) return items;
+    if (!url.includes("nhk.or.jp")) return "";
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      cache: "no-store",
+    });
+    if (!res.ok) return "";
+    const html = await res.text();
 
-    const json = await res.json();
-    const text: string = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    if (!text) return items;
+    // NHK記事本文を抽出（複数のセレクタに対応）
+    const bodyPatterns = [
+      /<section[^>]*class="[^"]*body[^"]*"[^>]*>([\s\S]*?)<\/section>/i,
+      /<div[^>]*class="[^"]*body[^"]*"[^>]*>([\s\S]*?)<\/div>/i,
+      /<div[^>]*id="news_textbody"[^>]*>([\s\S]*?)<\/div>/i,
+    ];
 
-    const lines = text.split(/\n+/);
-    const summaries: string[] = [];
-    let current = "";
-    for (const line of lines) {
-      const m = line.match(/^(\d+)[.．、]\s*(.*)/);
+    for (const pattern of bodyPatterns) {
+      const m = html.match(pattern);
       if (m) {
-        if (current) summaries.push(current.trim());
-        current = m[2];
-      } else if (current && line.trim()) {
-        current += " " + line.trim();
+        const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        if (text.length > 20) {
+          // 最初の2文（句点で区切る）
+          const sentences = text.split(/。/).filter(s => s.trim().length > 5);
+          return sentences.slice(0, 2).join("。") + "。";
+        }
       }
     }
-    if (current) summaries.push(current.trim());
 
-    return items.map((item, i) => ({
-      ...item,
-      summary: summaries[i] ?? "",
-    }));
+    // フォールバック: <p>タグの最初の内容
+    const pMatch = html.match(/<p[^>]*>([\s\S]{20,200}?)<\/p>/i);
+    if (pMatch) {
+      return pMatch[1].replace(/<[^>]+>/g, "").trim();
+    }
+    return "";
   } catch {
-    return items;
+    return "";
   }
 }
 
@@ -129,13 +99,18 @@ export async function GET() {
   const unique = all.filter((n) => {
     if (seen.has(n.title)) return false;
     seen.add(n.title);
-    // ノイズ除外
     if (NOISE_PATTERNS.some((p) => p.test(n.title))) return false;
-    // タイトルが短すぎるものを除外
     if (n.title.length < 10) return false;
     return true;
   }).slice(0, 7);
 
-  const withSummary = await summarizeWithAI(unique);
+  // NHK記事から本文を取得（並列で最大3件）
+  const withSummary = await Promise.all(
+    unique.map(async (item) => {
+      const summary = await fetchNHKSummary(item.url);
+      return { ...item, summary };
+    })
+  );
+
   return NextResponse.json({ items: withSummary });
 }
