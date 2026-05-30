@@ -19,8 +19,7 @@ export async function GET() {
       }
     );
     const json = await res.json();
-    const text = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? "no text";
-    return NextResponse.json({ ok: true, keyPrefix: apiKey.slice(0, 8) + "...", result: text });
+    return NextResponse.json({ ok: true, keyPrefix: apiKey.slice(0, 8) + "...", raw: json });
   } catch (e) {
     return NextResponse.json({ error: String(e) });
   }
