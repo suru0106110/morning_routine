@@ -5,11 +5,17 @@ export function speak(text: string, speed: number, onEnd: () => void): void {
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "ja-JP";
   utter.rate = speed;
-  utter.pitch = 1.0;
+  utter.pitch = 0.55;
 
   // prefer Japanese voice if available
   const voices = window.speechSynthesis.getVoices();
-  const jaVoice = voices.find((v) => v.lang.startsWith("ja"));
+  const priorities = ["Sayaka", "Haruka", "Ayumi", "Kyoko"];
+  let jaVoice = null;
+  for (const p of priorities) {
+    jaVoice = voices.find((v) => v.name.includes(p)) ?? null;
+    if (jaVoice) break;
+  }
+  if (!jaVoice) jaVoice = voices.find((v) => v.lang.startsWith("ja")) ?? null;
   if (jaVoice) utter.voice = jaVoice;
 
   utter.onend = onEnd;

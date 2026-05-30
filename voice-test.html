@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>音声テスト</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f0f;color:#f0f0f0;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;padding:40px 20px;max-width:600px;margin:0 auto}
+h1{font-size:1.3rem;font-weight:700;margin-bottom:6px}
+.sub{font-size:.78rem;color:rgba(255,255,255,.35);margin-bottom:28px}
+.section{margin-bottom:28px}
+.label{font-size:.7rem;font-weight:600;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.voice-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.voice-card:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.voice-card.playing{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3)}
+.voice-name{flex:1}
+.vn-main{font-size:.85rem;font-weight:500}
+.vn-sub{font-size:.7rem;color:rgba(255,255,255,.35);margin-top:2px}
+.play-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#f0f0f0;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.play-btn:hover{background:rgba(255,255,255,.2)}
+.play-btn svg{width:14px;height:14px}
+.controls{background:rgba(255,255,255,.04);border-radius:14px;padding:16px;margin-bottom:20px}
+.ctrl-row{margin-bottom:12px}
+.ctrl-row:last-child{margin-bottom:0}
+.ctrl-header{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px}
+.ctrl-val{color:rgba(255,255,255,.4)}
+input[type=range]{width:100%;accent-color:#f0f0f0}
+.range-ends{display:flex;justify-content:space-between;font-size:.65rem;color:rgba(255,255,255,.2);margin-top:2px}
+textarea{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;color:#f0f0f0;font-size:.82rem;resize:vertical;outline:none;font-family:inherit;line-height:1.6}
+textarea:focus{border-color:rgba(255,255,255,.25)}
+.empty{text-align:center;padding:24px;color:rgba(255,255,255,.25);font-size:.8rem}
+.badge{font-size:.62rem;padding:2px 6px;border-radius:99px;margin-left:6px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)}
+.badge.ja{background:rgba(52,211,153,.15);color:#34d399}
+</style>
+</head>
+<body>
+<h1>音声サンプルテスト</h1>
+<p class="sub">このWindowsで使える音声を全部試せます。気に入った声のpitch/rateを調整して。</p>
+
+<div class="section">
+  <div class="label">サンプルテキスト</div>
+  <textarea id="sample-text" rows="3">本日の資産変動はプラス12,340円、プラス1.3パーセントです。トヨタはプラス0.8パーセント。続いて1本目のニュースです。日経平均が続伸、半導体関連株がけん引しました。</textarea>
+</div>
+
+<div class="section">
+  <div class="label">音声調整</div>
+  <div class="controls">
+    <div class="ctrl-row">
+      <div class="ctrl-header"><span>速度 (rate)</span><span class="ctrl-val" id="rate-val">1.0x</span></div>
+      <input type="range" id="rate" min="0.7" max="1.8" step="0.05" value="1.0" oninput="document.getElementById('rate-val').textContent=parseFloat(this.value).toFixed(2)+'x'"/>
+      <div class="range-ends"><span>遅い</span><span>速い</span></div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-header"><span>音程 (pitch)</span><span class="ctrl-val" id="pitch-val">1.0</span></div>
+      <input type="range" id="pitch" min="0.5" max="2.0" step="0.05" value="1.0" oninput="document.getElementById('pitch-val').textContent=parseFloat(this.value).toFixed(2)"/>
+      <div class="range-ends"><span>低い</span><span>高い</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">利用可能な音声 <span id="voice-count" class="badge"></span></div>
+  <div id="ja-voices"></div>
+  <div style="margin-top:16px">
+    <div class="label" style="margin-bottom:8px">その他の言語</div>
+    <div id="other-voices"></div>
+  </div>
+</div>
+
+<script>
+let voices = [];
+let currentUtter = null;
+
+function loadVoices(){
+  voices = window.speechSynthesis.getVoices();
+  render();
+}
+
+function render(){
+  const ja = voices.filter(v=>v.lang.startsWith("ja"));
+  const other = voices.filter(v=>!v.lang.startsWith("ja"));
+
+  document.getElementById("voice-count").textContent = voices.length + "個";
+
+  const jaEl = document.getElementById("ja-voices");
+  const otherEl = document.getElementById("other-voices");
+
+  if(!ja.length){
+    jaEl.innerHTML = `<div class="empty">日本語音声が見つかりません<br><span style="font-size:.7rem">Windowsの設定 → 時刻と言語 → 音声 → 日本語音声を追加してください</span></div>`;
+  } else {
+    jaEl.innerHTML = ja.map((v,i)=>voiceCard(v,`ja-${i}`,'ja')).join("");
+  }
+
+  otherEl.innerHTML = other.slice(0,10).map((v,i)=>voiceCard(v,`ot-${i}`,'')).join("");
+
+  document.querySelectorAll(".voice-card").forEach(card=>{
+    card.addEventListener("click",()=>playVoice(card.dataset.idx));
+  });
+}
+
+function voiceCard(v, id, type){
+  const isLocal = v.localService ? "端末内蔵" : "ネット";
+  return `<div class="voice-card" data-idx="${v.voiceURI}" id="card-${id}">
+    <div class="voice-name">
+      <div class="vn-main">${v.name}<span class="badge ${type}">${v.lang}</span></div>
+      <div class="vn-sub">${isLocal} · ${v.voiceURI}</div>
+    </div>
+    <button class="play-btn">
+      <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+  </div>`;
+}
+
+function playVoice(voiceURI){
+  window.speechSynthesis.cancel();
+  const text = document.getElementById("sample-text").value;
+  const rate = parseFloat(document.getElementById("rate").value);
+  const pitch = parseFloat(document.getElementById("pitch").value);
+  const voice = voices.find(v=>v.voiceURI===voiceURI);
+
+  document.querySelectorAll(".voice-card").forEach(c=>c.classList.remove("playing"));
+  const card = document.querySelector(`[data-idx="${voiceURI}"]`);
+  if(card) card.classList.add("playing");
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = voice?.lang || "ja-JP";
+  utter.rate = rate;
+  utter.pitch = pitch;
+  if(voice) utter.voice = voice;
+  utter.onend = ()=>{ if(card) card.classList.remove("playing"); };
+  utter.onerror = ()=>{ if(card) card.classList.remove("playing"); };
+  window.speechSynthesis.speak(utter);
+}
+
+window.speechSynthesis.onvoiceschanged = loadVoices;
+loadVoices();
+</script>
+</body>
+</html>

@@ -3,9 +3,9 @@ import { NextResponse } from "next/server";
 type NewsItem = { title: string; summary: string; url: string };
 
 const RSS_FEEDS = [
-  "https://www3.nhk.or.jp/rss/news/cat5.xml",   // NHK 経済
-  "https://www3.nhk.or.jp/rss/news/cat1.xml",   // NHK 社会
-  "https://feeds.reuters.com/reuters/JPBusinessNews",
+  "https://www.nikkei.com/rss/index.rss",         // 日経 トップ
+  "https://www.nikkei.com/rss/marketedit.rss",    // 日経 マーケット
+  "https://www3.nhk.or.jp/rss/news/cat5.xml",    // NHK 経済（補完）
 ];
 
 function extractText(xml: string, tag: string): string {

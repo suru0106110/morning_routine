@@ -14,7 +14,7 @@ export type Settings = {
 const HOLDINGS_KEY = "morning_holdings";
 const SETTINGS_KEY = "morning_settings";
 
-export const defaultSettings: Settings = { speed: 1.0, newsCount: 7 };
+export const defaultSettings: Settings = { speed: 1.6, newsCount: 7 };
 
 export function getHoldings(): Holding[] {
   if (typeof window === "undefined") return [];

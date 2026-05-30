@@ -41,16 +41,13 @@ export default function MorningPlayer({ assetText }: Props) {
   const buildQueue = useCallback(
     (items: NewsItem[]): string[] => {
       const q: string[] = [];
-      const today = new Date().toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" });
-      q.push(`おはようございます。${today}のモーニングダイジェストをお届けします。`);
       if (assetText) q.push(assetText);
-      q.push(`続いて、本日のニュースを${items.length}本お届けします。`);
       items.forEach((n, i) => {
         const intro = `${i + 1}本目。${n.title}。`;
         const body = n.summary ? `${n.summary}` : "";
         q.push(intro + (body ? " " + body : ""));
       });
-      q.push("以上で本日のダイジェストは終了です。良い一日を！");
+      q.push("以上です。");
       return q;
     },
     [assetText]
