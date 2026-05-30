@@ -65,8 +65,8 @@ function cleanSummary(text: string): string {
     /(?:した|します|ました|ません|でした|ます|です|される|された|している|していた|おり|あり|なり|という|ています|ていた|見込み|予定|方針)$/.test(s);
 
   const complete = sentences.filter(isComplete);
-  const result = (complete.length > 0 ? complete : sentences).slice(0, 2);
-  return result.join("。") + "。";
+  if (complete.length === 0) return "";
+  return complete.slice(0, 2).join("。") + "。";
 }
 
 // NHK記事ページから本文の最初の1〜2文を取得
