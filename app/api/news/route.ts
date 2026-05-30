@@ -3,10 +3,24 @@ import { NextResponse } from "next/server";
 type NewsItem = { title: string; summary: string; url: string };
 
 const RSS_FEEDS = [
-  "https://news.google.com/rss/search?q=経済+OR+株式+OR+ビジネス&hl=ja&gl=JP&ceid=JP:ja",
-  "https://news.google.com/rss/search?q=日経平均+OR+為替+OR+金融&hl=ja&gl=JP&ceid=JP:ja",
+  // Google News トピック（経済・ビジネス）- 検索より精度が高い
+  "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+  // Reuters Japan
   "https://feeds.reuters.com/reuters/JPBusinessNews",
+  // NHK 経済
   "https://www3.nhk.or.jp/rss/news/cat5.xml",
+];
+
+// ニュースとして不適切なタイトルを除外するパターン
+const NOISE_PATTERNS = [
+  /基準価格/,
+  /投資信託情報/,
+  /株価情報/,
+  /【\d{7}[A-Z]?】/,  // 投信コード
+  /^\s*[\d,]+\s*円\s*$/,  // 数字だけのタイトル
+  /yahoo.*ファイナンス/i,
+  /みんかぶ/,
+  /株探/,
 ];
 
 const UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
@@ -115,6 +129,10 @@ export async function GET() {
   const unique = all.filter((n) => {
     if (seen.has(n.title)) return false;
     seen.add(n.title);
+    // ノイズ除外
+    if (NOISE_PATTERNS.some((p) => p.test(n.title))) return false;
+    // タイトルが短すぎるものを除外
+    if (n.title.length < 10) return false;
     return true;
   }).slice(0, 7);
 
