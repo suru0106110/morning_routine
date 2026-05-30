@@ -2,70 +2,54 @@ import { NextResponse } from "next/server";
 
 type NewsItem = { title: string; summary: string; url: string };
 
-// 日経 → NHK の順で試す（フォールバック構成）
 const RSS_FEEDS = [
-  {
-    url: "https://www.nikkei.com/rss/index.rss",
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept": "application/rss+xml, application/xml, text/xml, */*",
-      "Accept-Language": "ja,en;q=0.9",
-      "Referer": "https://www.nikkei.com/",
-    },
-  },
-  {
-    url: "https://www.nikkei.com/rss/marketedit.rss",
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-      "Accept": "application/rss+xml, application/xml, text/xml, */*",
-      "Referer": "https://www.nikkei.com/",
-    },
-  },
-  {
-    url: "https://www3.nhk.or.jp/rss/news/cat5.xml",
-    headers: { "User-Agent": "MorningApp/1.0" },
-  },
-  {
-    url: "https://www3.nhk.or.jp/rss/news/cat1.xml",
-    headers: { "User-Agent": "MorningApp/1.0" },
-  },
+  // Google ニュース（日本・経済） - サーバーからの取得に強い
+  "https://news.google.com/rss/search?q=経済+OR+株式+OR+ビジネス&hl=ja&gl=JP&ceid=JP:ja",
+  "https://news.google.com/rss/search?q=日経平均+OR+為替+OR+金融&hl=ja&gl=JP&ceid=JP:ja",
+  // Reuters Japan
+  "https://feeds.reuters.com/reuters/JPBusinessNews",
+  // NHK
+  "https://www3.nhk.or.jp/rss/news/cat5.xml",
 ];
 
-function extractCdata(block: string, tag: string): string {
-  const patterns = [
-    new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, "i"),
-    new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"),
-  ];
-  for (const re of patterns) {
-    const m = block.match(re);
-    if (m) return m[1].trim();
-  }
-  return "";
+const UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+
+function extractTag(block: string, tag: string): string {
+  const re = new RegExp(
+    `<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`,
+    "i"
+  );
+  return (block.match(re)?.[1] ?? "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function parseItems(xml: string): NewsItem[] {
+function parseXml(xml: string): NewsItem[] {
+  const blocks = xml.match(/<item[\s>]([\s\S]*?)<\/item>/gi) ?? [];
   const items: NewsItem[] = [];
-  const blocks = xml.match(/<item[\s>]([\s\S]*?)<\/item>/gi) || [];
   for (const block of blocks.slice(0, 6)) {
-    const title = extractCdata(block, "title").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"');
-    const desc = extractCdata(block, "description").replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").slice(0, 120).trim();
-    const link = extractCdata(block, "link") || extractCdata(block, "guid");
-    if (title && title.length > 3) {
-      items.push({ title, summary: desc, url: link });
-    }
+    const title = extractTag(block, "title");
+    const desc = extractTag(block, "description").slice(0, 120);
+    const link = extractTag(block, "link") || extractTag(block, "guid");
+    if (title.length > 3) items.push({ title, summary: desc, url: link });
   }
   return items;
 }
 
-async function fetchFeed(feed: typeof RSS_FEEDS[0]): Promise<NewsItem[]> {
+async function fetchFeed(url: string): Promise<NewsItem[]> {
   try {
-    const res = await fetch(feed.url, {
-      headers: feed.headers,
+    const res = await fetch(url, {
+      headers: { "User-Agent": UA, Accept: "application/rss+xml,application/xml,text/xml,*/*" },
       next: { revalidate: 600 },
     });
     if (!res.ok) return [];
-    const xml = await res.text();
-    return parseItems(xml);
+    return parseXml(await res.text());
   } catch {
     return [];
   }
@@ -73,13 +57,11 @@ async function fetchFeed(feed: typeof RSS_FEEDS[0]): Promise<NewsItem[]> {
 
 export async function GET() {
   const results = await Promise.allSettled(RSS_FEEDS.map(fetchFeed));
-
   const all: NewsItem[] = [];
   for (const r of results) {
     if (r.status === "fulfilled") all.push(...r.value);
   }
 
-  // 重複除去
   const seen = new Set<string>();
   const unique = all.filter((n) => {
     if (seen.has(n.title)) return false;
