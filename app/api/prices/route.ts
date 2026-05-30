@@ -61,6 +61,12 @@ async function fetchPriceV8(symbol: string): Promise<PriceResult | null> {
   }
 }
 
+// デバッグ用（確認後削除）
+export async function GET() {
+  const result = await fetchPrice("1475.T");
+  return NextResponse.json({ test: result });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { symbols }: { symbols: string[] } = await req.json();
