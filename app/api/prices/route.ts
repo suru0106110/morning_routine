@@ -7,11 +7,43 @@ type PriceResult = {
   currency: string;
 };
 
+const HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+  "Accept-Language": "ja,en;q=0.9",
+  "Origin": "https://finance.yahoo.com",
+  "Referer": "https://finance.yahoo.com/",
+};
+
 async function fetchPrice(symbol: string): Promise<PriceResult | null> {
+  // v7 quote endpoint（v8より安定）
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}&fields=regularMarketPrice,regularMarketPreviousClose,currency`;
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: HEADERS,
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const q = json?.quoteResponse?.result?.[0];
+    if (!q) throw new Error("no result");
+    return {
+      symbol,
+      price: q.regularMarketPrice ?? 0,
+      prevClose: q.regularMarketPreviousClose ?? 0,
+      currency: q.currency ?? "JPY",
+    };
+  } catch {
+    // fallback to v8 chart endpoint
+    return fetchPriceV8(symbol);
+  }
+}
+
+async function fetchPriceV8(symbol: string): Promise<PriceResult | null> {
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+  try {
+    const res = await fetch(url, {
+      headers: HEADERS,
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
@@ -33,7 +65,6 @@ export async function POST(req: NextRequest) {
   try {
     const { symbols }: { symbols: string[] } = await req.json();
     if (!symbols?.length) return NextResponse.json({ prices: [] });
-
     const results = await Promise.all(symbols.map(fetchPrice));
     const prices = results.filter(Boolean) as PriceResult[];
     return NextResponse.json({ prices });

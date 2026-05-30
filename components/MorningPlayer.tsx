@@ -43,9 +43,7 @@ export default function MorningPlayer({ assetText }: Props) {
       const q: string[] = [];
       if (assetText) q.push(assetText);
       items.forEach((n, i) => {
-        const intro = `${i + 1}本目。${n.title}。`;
-        const body = n.summary ? `${n.summary}` : "";
-        q.push(intro + (body ? " " + body : ""));
+        q.push(`${i + 1}本目。${n.title}。`);
       });
       q.push("以上です。");
       return q;
