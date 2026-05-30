@@ -47,6 +47,17 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
   }
 }
 
+function cleanSummary(text: string): string {
+  // 句点で文を分割して最初の2文だけ取る
+  const sentences = text
+    .replace(/…+/g, "")           // … を除去
+    .replace(/　/g, " ")           // 全角スペース
+    .split(/。/)
+    .map(s => s.trim())
+    .filter(s => s.length > 5);
+  return sentences.slice(0, 2).join("。") + "。";
+}
+
 // NHK記事ページから本文の最初の1〜2文を取得
 async function fetchNHKSummary(url: string): Promise<string> {
   try {
@@ -70,9 +81,7 @@ async function fetchNHKSummary(url: string): Promise<string> {
       if (m) {
         const text = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
         if (text.length > 20) {
-          // 最初の2文（句点で区切る）
-          const sentences = text.split(/。/).filter(s => s.trim().length > 5);
-          return sentences.slice(0, 2).join("。") + "。";
+          return cleanSummary(text);
         }
       }
     }
@@ -80,7 +89,7 @@ async function fetchNHKSummary(url: string): Promise<string> {
     // フォールバック: <p>タグの最初の内容
     const pMatch = html.match(/<p[^>]*>([\s\S]{20,200}?)<\/p>/i);
     if (pMatch) {
-      return pMatch[1].replace(/<[^>]+>/g, "").trim();
+      return cleanSummary(pMatch[1].replace(/<[^>]+>/g, "").trim());
     }
     return "";
   } catch {
