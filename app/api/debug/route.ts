@@ -15,7 +15,7 @@ export async function GET() {
         "HTTP-Referer": "https://morning-routine-liard.vercel.app",
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
+        model: "google/gemma-3-27b-it:free",
         messages: [{ role: "user", content: "「日経平均が上昇」を1文で要約して" }],
         max_tokens: 100,
       }),
