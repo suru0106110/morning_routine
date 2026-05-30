@@ -58,9 +58,15 @@ function cleanSummary(text: string): string {
   const sentences = cleaned
     .split(/。/)
     .map(s => s.trim())
-    .filter(s => s.length > 5);
+    .filter(s => s.length > 10);  // 短すぎる断片を除外
 
-  return sentences.slice(0, 2).join("。") + "。";
+  // 途中で切れた文（ました/します/でした以外で終わる）を除外
+  const complete = sentences.filter(s =>
+    /[。]?$/.test(s) && !/[ぁ-ん]{1,3}$/.test(s) || s.length > 30
+  );
+
+  const result = (complete.length > 0 ? complete : sentences).slice(0, 2);
+  return result.join("。") + "。";
 }
 
 // NHK記事ページから本文の最初の1〜2文を取得
