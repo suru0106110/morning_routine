@@ -2,27 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 
 type NewsItem = { title: string; summary: string; url: string; pubDate?: number };
 
+const NHK = "https://news.web.nhk/n-data/conf/na/rss";
+
 const CATEGORY_FEEDS: Record<string, string[]> = {
   economy: [
-    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+    `${NHK}/cat5.xml`,
     "https://feeds.reuters.com/reuters/JPBusinessNews",
-    "https://www3.nhk.or.jp/rss/news/cat5.xml",
+    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
   ],
   tech: [
-    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREp0YjNNU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+    `${NHK}/cat3.xml`,
     "https://rss.itmedia.co.jp/rss/2.0/news_bursts.xml",
+    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREp0YjNNU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
   ],
   world: [
-    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+    `${NHK}/cat6.xml`,
     "https://feeds.reuters.com/Reuters/worldNews",
+    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx1YlY4U0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
   ],
   politics: [
+    `${NHK}/cat4.xml`,
     "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
-    "https://www3.nhk.or.jp/rss/news/cat4.xml",
   ],
   sports: [
     "https://news.google.com/rss/search?q=スポーツ+野球+サッカー&hl=ja&gl=JP&ceid=JP:ja",
-    "https://www3.nhk.or.jp/rss/news/cat7.xml",
   ],
   entertainment: [
     "https://news.google.com/rss/search?q=炎上+スキャンダル+話題&hl=ja&gl=JP&ceid=JP:ja",
@@ -30,9 +33,12 @@ const CATEGORY_FEEDS: Record<string, string[]> = {
   ],
 };
 
+// デフォルト：NHK総合＋経済＋国際
 const DEFAULT_FEEDS = [
-  ...CATEGORY_FEEDS.economy,
-  ...CATEGORY_FEEDS.world,
+  `${NHK}/cat0.xml`,
+  `${NHK}/cat5.xml`,
+  `${NHK}/cat6.xml`,
+  "https://feeds.reuters.com/reuters/JPBusinessNews",
 ];
 
 const NOISE_PATTERNS = [
