@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-type NewsItem = { title: string; summary: string; url: string };
+type NewsItem = { title: string; summary: string; url: string; pubDate?: number };
 
 const CATEGORY_FEEDS: Record<string, string[]> = {
   economy: [
@@ -83,7 +83,8 @@ function parseXml(xml: string): NewsItem[] {
     }
 
     const summary = cleanSummary(desc);
-    if (title.length > 3) items.push({ title, summary, url: link });
+    const pubDate = new Date(pubDateStr).getTime();
+    if (title.length > 3) items.push({ title, summary, url: link, pubDate: isNaN(pubDate) ? undefined : pubDate });
   }
   return items;
 }
@@ -131,6 +132,9 @@ export async function GET(req: NextRequest) {
       keywords.some(kw => n.title.includes(kw) || n.summary.includes(kw))
     );
   }
+
+  // 新しい順にソート
+  unique.sort((a, b) => (b.pubDate ?? 0) - (a.pubDate ?? 0));
 
   return NextResponse.json(
     { items: unique.slice(0, count) },
