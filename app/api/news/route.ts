@@ -66,7 +66,7 @@ function parseXml(xml: string): NewsItem[] {
   const blocks = xml.match(/<item[\s>]([\s\S]*?)<\/item>/gi) ?? [];
   const items: NewsItem[] = [];
   const now = Date.now();
-  const cutoff = now - 24 * 60 * 60 * 1000; // 24時間以内
+  const cutoff = now - 48 * 60 * 60 * 1000; // 48時間以内
 
   for (const block of blocks.slice(0, 10)) {
     const title = extractTag(block, "title");
