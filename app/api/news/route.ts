@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
   const count = parseInt(searchParams.get("count") ?? "7");
 
   const feedUrls = categories.length > 0
-    ? [...new Set(categories.flatMap(c => CATEGORY_FEEDS[c] ?? []))]
+    ? Array.from(new Set(categories.flatMap(c => CATEGORY_FEEDS[c] ?? [])))
     : DEFAULT_FEEDS;
 
   const results = await Promise.allSettled(feedUrls.map(fetchFeed));
