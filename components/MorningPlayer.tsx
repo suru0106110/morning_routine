@@ -25,9 +25,14 @@ export default function MorningPlayer({ assetText }: Props) {
   const fetchNews = useCallback(async () => {
     setLoadingNews(true);
     try {
-      const res = await fetch("/api/news");
+      const s = settings.current;
+      const params = new URLSearchParams();
+      if (s.newsCategories?.length) params.set("categories", s.newsCategories.join(","));
+      if (s.newsKeywords?.length) params.set("keywords", s.newsKeywords.join(","));
+      params.set("count", String(s.newsCount));
+      const res = await fetch(`/api/news?${params.toString()}`);
       const { items }: { items: NewsItem[] } = await res.json();
-      setNews(items.slice(0, settings.current.newsCount));
+      setNews(items.slice(0, s.newsCount));
     } finally {
       setLoadingNews(false);
     }
