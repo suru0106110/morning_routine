@@ -25,11 +25,12 @@ const CATEGORY_FEEDS: Record<string, string[]> = {
     "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFZxYUdjU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
   ],
   sports: [
+    `${NHK}/cat7.xml`,
     "https://news.google.com/rss/search?q=スポーツ+野球+サッカー&hl=ja&gl=JP&ceid=JP:ja",
   ],
   entertainment: [
+    `${NHK}/cat2.xml`,
     "https://news.google.com/rss/search?q=炎上+スキャンダル+話題&hl=ja&gl=JP&ceid=JP:ja",
-    "https://news.google.com/rss/search?q=トレンド+バズ+SNS+事件&hl=ja&gl=JP&ceid=JP:ja",
   ],
 };
 
