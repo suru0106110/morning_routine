@@ -23,6 +23,7 @@ export default function Home() {
         <div>
           <p className="text-white/40 text-sm">{greeting}</p>
           <h1 className="text-2xl font-bold mt-0.5">朝のダイジェスト</h1>
+          <p className="text-white/20 text-xs mt-0.5">v1.3.0</p>
         </div>
         <Link
           href="/settings"
