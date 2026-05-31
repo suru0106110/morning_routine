@@ -65,10 +65,21 @@ function cleanSummary(text: string): string {
 function parseXml(xml: string): NewsItem[] {
   const blocks = xml.match(/<item[\s>]([\s\S]*?)<\/item>/gi) ?? [];
   const items: NewsItem[] = [];
-  for (const block of blocks.slice(0, 8)) {
+  const now = Date.now();
+  const cutoff = now - 24 * 60 * 60 * 1000; // 24時間以内
+
+  for (const block of blocks.slice(0, 10)) {
     const title = extractTag(block, "title");
     const link = extractTag(block, "link") || extractTag(block, "guid");
     const desc = extractTag(block, "description");
+    const pubDateStr = extractTag(block, "pubDate");
+
+    // 日付フィルター（pubDateがある場合は24時間以内のみ）
+    if (pubDateStr) {
+      const pubDate = new Date(pubDateStr).getTime();
+      if (!isNaN(pubDate) && pubDate < cutoff) continue;
+    }
+
     const summary = cleanSummary(desc);
     if (title.length > 3) items.push({ title, summary, url: link });
   }
@@ -79,7 +90,7 @@ async function fetchFeed(url: string): Promise<NewsItem[]> {
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": UA, Accept: "application/rss+xml,application/xml,text/xml,*/*" },
-      next: { revalidate: 900 },
+      next: { revalidate: 300 },
     });
     if (!res.ok) return [];
     return parseXml(await res.text());
