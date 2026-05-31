@@ -25,8 +25,8 @@ const CATEGORY_FEEDS: Record<string, string[]> = {
     "https://www3.nhk.or.jp/rss/news/cat7.xml",
   ],
   entertainment: [
-    "https://news.google.com/rss/search?q=芸能+エンタメ+映画&hl=ja&gl=JP&ceid=JP:ja",
-    "https://www3.nhk.or.jp/rss/news/cat2.xml",
+    "https://news.google.com/rss/search?q=芸能+ドラマ+映画+音楽&hl=ja&gl=JP&ceid=JP:ja",
+    "https://news.google.com/rss/search?q=アーティスト+俳優+アニメ&hl=ja&gl=JP&ceid=JP:ja",
   ],
 };
 
