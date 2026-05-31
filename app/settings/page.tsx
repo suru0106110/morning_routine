@@ -20,7 +20,7 @@ export default function SettingsPage() {
     { id: "world", label: "国際" },
     { id: "politics", label: "政治" },
     { id: "sports", label: "スポーツ" },
-    { id: "entertainment", label: "エンタメ" },
+    { id: "entertainment", label: "話題・炎上" },
   ];
 
   useEffect(() => {
