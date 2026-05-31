@@ -21,10 +21,12 @@ const CATEGORY_FEEDS: Record<string, string[]> = {
     "https://www3.nhk.or.jp/rss/news/cat4.xml",
   ],
   sports: [
-    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRFp1ZEdvU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+    "https://news.google.com/rss/search?q=スポーツ+野球+サッカー&hl=ja&gl=JP&ceid=JP:ja",
+    "https://www3.nhk.or.jp/rss/news/cat7.xml",
   ],
   entertainment: [
-    "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNREUzTjNjU0FtcGhHZ0pLVWlnQVAB?hl=ja&gl=JP&ceid=JP:ja",
+    "https://news.google.com/rss/search?q=芸能+エンタメ+映画&hl=ja&gl=JP&ceid=JP:ja",
+    "https://www3.nhk.or.jp/rss/news/cat2.xml",
   ],
 };
 
