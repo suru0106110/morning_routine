@@ -195,10 +195,10 @@ export default function SettingsPage() {
             <div className="flex justify-between text-sm mb-2">
               <span>ニュース本数</span><span className="text-white/50">{settings.newsCount}本</span>
             </div>
-            <input type="range" min={3} max={10} step={1} value={settings.newsCount}
+            <input type="range" min={3} max={30} step={1} value={settings.newsCount}
               onChange={(e) => setSettings({ ...settings, newsCount: parseInt(e.target.value) })}
               className="w-full accent-white" />
-            <div className="flex justify-between text-xs text-white/20 mt-1"><span>3本</span><span>10本</span></div>
+            <div className="flex justify-between text-xs text-white/20 mt-1"><span>3本</span><span>30本</span></div>
           </div>
         </div>
       </section>

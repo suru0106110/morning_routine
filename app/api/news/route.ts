@@ -34,9 +34,11 @@ const CATEGORY_FEEDS: Record<string, string[]> = {
   ],
 };
 
-// デフォルト：NHK総合＋経済＋国際
+// デフォルト：NHK全カテゴリ＋Reuters
 const DEFAULT_FEEDS = [
   `${NHK}/cat0.xml`,
+  `${NHK}/cat1.xml`,
+  `${NHK}/cat4.xml`,
   `${NHK}/cat5.xml`,
   `${NHK}/cat6.xml`,
   "https://feeds.reuters.com/reuters/JPBusinessNews",
@@ -68,7 +70,7 @@ function cleanSummary(text: string): string {
 
   const complete = sentences.filter(isComplete);
   if (complete.length === 0) return "";
-  return complete.slice(0, 2).join("。") + "。";
+  return complete.slice(0, 5).join("。") + "。";
 }
 
 function parseXml(xml: string): NewsItem[] {
@@ -77,7 +79,7 @@ function parseXml(xml: string): NewsItem[] {
   const now = Date.now();
   const cutoff = now - 48 * 60 * 60 * 1000; // 48時間以内
 
-  for (const block of blocks.slice(0, 10)) {
+  for (const block of blocks.slice(0, 15)) {
     const title = extractTag(block, "title");
     const link = extractTag(block, "link") || extractTag(block, "guid");
     const desc = extractTag(block, "description");
