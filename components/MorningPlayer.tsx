@@ -21,6 +21,35 @@ export default function MorningPlayer({ assetText }: Props) {
   const queue = useRef<string[]>([]);
   const queueIndex = useRef(0);
   const isStopped = useRef(false);
+  const wakeLock = useRef<WakeLockSentinel | null>(null);
+
+  // Wake Lock: 再生中は画面を消さない
+  const requestWakeLock = useCallback(async () => {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      wakeLock.current = await (navigator as Navigator & { wakeLock: { request: (type: string) => Promise<WakeLockSentinel> } }).wakeLock.request("screen");
+    } catch {
+      // 非対応端末は無視
+    }
+  }, []);
+
+  const releaseWakeLock = useCallback(async () => {
+    if (wakeLock.current) {
+      await wakeLock.current.release();
+      wakeLock.current = null;
+    }
+  }, []);
+
+  // 画面が再表示されたとき（通知バーを開いたあとなど）に再取得
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible" && status === "playing") {
+        await requestWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [status, requestWakeLock]);
 
   const fetchNews = useCallback(async () => {
     setLoadingNews(true);
@@ -64,6 +93,7 @@ export default function MorningPlayer({ assetText }: Props) {
     if (queueIndex.current >= queue.current.length) {
       setStatus("done");
       setCurrentIndex(queue.current.length);
+      releaseWakeLock();
       return;
     }
     const text = queue.current[queueIndex.current];
@@ -80,8 +110,9 @@ export default function MorningPlayer({ assetText }: Props) {
     queue.current = buildQueue(news);
     queueIndex.current = 0;
     setStatus("playing");
+    requestWakeLock();
     playNext();
-  }, [buildQueue, news, playNext]);
+  }, [buildQueue, news, playNext, requestWakeLock]);
 
   const handlePause = useCallback(() => {
     pause();
@@ -99,7 +130,8 @@ export default function MorningPlayer({ assetText }: Props) {
     setStatus("idle");
     setCurrentIndex(-1);
     queueIndex.current = 0;
-  }, []);
+    releaseWakeLock();
+  }, [releaseWakeLock]);
 
   const handleSkip = useCallback(() => {
     stop();
