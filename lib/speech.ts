@@ -1,38 +1,49 @@
-let currentUtterance: SpeechSynthesisUtterance | null = null;
+let currentAudio: HTMLAudioElement | null = null;
+let currentObjectUrl: string | null = null;
 
-export function speak(text: string, speed: number, onEnd: () => void): void {
-  stop();
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "ja-JP";
-  utter.rate = speed;
-  utter.pitch = 0.55;
-
-  // prefer Japanese voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const priorities = ["Sayaka", "Haruka", "Ayumi", "Kyoko"];
-  let jaVoice = null;
-  for (const p of priorities) {
-    jaVoice = voices.find((v) => v.name.includes(p)) ?? null;
-    if (jaVoice) break;
+function cleanup() {
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.src = "";
+    currentAudio = null;
   }
-  if (!jaVoice) jaVoice = voices.find((v) => v.lang.startsWith("ja")) ?? null;
-  if (jaVoice) utter.voice = jaVoice;
+  if (currentObjectUrl) {
+    URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = null;
+  }
+}
 
-  utter.onend = onEnd;
-  utter.onerror = onEnd;
-  currentUtterance = utter;
-  window.speechSynthesis.speak(utter);
+export async function speak(text: string, _speed: number, onEnd: () => void): Promise<void> {
+  cleanup();
+  try {
+    const res = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) { onEnd(); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    currentObjectUrl = url;
+    const audio = new Audio(url);
+    currentAudio = audio;
+    audio.onended = () => { cleanup(); onEnd(); };
+    audio.onerror = () => { cleanup(); onEnd(); };
+    await audio.play();
+  } catch {
+    cleanup();
+    onEnd();
+  }
 }
 
 export function stop(): void {
-  window.speechSynthesis.cancel();
-  currentUtterance = null;
+  cleanup();
 }
 
 export function pause(): void {
-  window.speechSynthesis.pause();
+  currentAudio?.pause();
 }
 
 export function resume(): void {
-  window.speechSynthesis.resume();
+  currentAudio?.play();
 }
